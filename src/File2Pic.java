@@ -32,7 +32,7 @@ public class File2Pic {
     }
 
     public static void main(String[] args) {
-        new File2Pic(args[0],Boolean.getBoolean(args[1]));
+        new File2Pic(args[0],Boolean.parseBoolean(args[1]));
     }
 
     public void convertIntopicture(File file, File savePath){
@@ -76,7 +76,10 @@ public class File2Pic {
             graphics2D.fillRect(i-(row*(dimensions)), row, 1, 1);
         }
         graphics2D.dispose ();
-        ImageIO.write ( image, "png", new File (savePath + "\\" + file.getName() + ".png"));
+        if (!savePath.exists()){
+            savePath.mkdir();
+        }
+        ImageIO.write (image, "png", new File(savePath + "\\" + file.getName() + ".png"));
     }
 
     public void assembleIntColorValues(ArrayList<Integer> colorIntValues, File file, byte[] data){
