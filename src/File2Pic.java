@@ -59,6 +59,7 @@ public class File2Pic {
             }
             nextVal(255);
 
+            System.out.println(file.length());
             //Assemble Size Headder
             for (char c : String.valueOf(file.length()).toCharArray()){
                 nextVal(Integer.parseInt(c+""));
@@ -79,6 +80,7 @@ public class File2Pic {
                 i++;
                 nextVal(dataBuffer);
             }
+            in.close();
 
             //Print 100%
             System.out.println("100%"+" ("+dataLength+"/"+dataLength+")");

@@ -2,7 +2,8 @@ import java.util.Scanner;
 
 public class Start {
     public static void main(String[] args) {
-        if (true){
+        //for Testing
+        if (false){
             args[0] = ".\\testFiles\\Logo64.png.png";
             args[1] = "false";
             System.out.println("Klick");
