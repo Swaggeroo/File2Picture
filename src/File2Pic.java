@@ -5,9 +5,15 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
 public class File2Pic {
     String path;
+
+    //File Pasing
+    int dataBuffer;
+    int dataBufferCounter = -1;
+    int[] colTmp = new int[3];
 
     public File2Pic(String path, boolean toPic) {
         this.path = path;
@@ -32,29 +38,53 @@ public class File2Pic {
     }
 
     public static void main(String[] args) {
-        new File2Pic(args[0],Boolean.parseBoolean(args[1]));
+        System.out.println("Klick");
+        new Scanner(System.in).nextLine();
+        System.out.println("Started");
+        if (Boolean.parseBoolean(args[2])){
+            new File2Pic(".\\testFiles\\",true);
+        }else {
+            new File2Pic(args[0],Boolean.parseBoolean(args[1]));
+        }
     }
 
     public void convertIntopicture(File file, File savePath){
+        System.out.println("Covert started: "+file.getAbsolutePath());
         try {
-            //Get Data
-            byte[] data  = Files.readAllBytes(file.toPath());
-
-            //Conv into int´s
-            ArrayList<Integer> colorIntValues = new ArrayList<>();
-            assembleIntColorValues(colorIntValues,file,data);
-
             //Conv into color´s
             ArrayList<Color> colors = new ArrayList<>();
-            for (int i = 0; i < colorIntValues.size(); i = i+3) {
-                if (i < colorIntValues.size()-2){
-                    colors.add(new Color(colorIntValues.get(i),colorIntValues.get(i+1),colorIntValues.get(i+2)));
-                }else if (i < colorIntValues.size()-1){
-                    colors.add(new Color(colorIntValues.get(i),colorIntValues.get(i+1),0));
-                }else {
-                    colors.add(new Color(colorIntValues.get(i),0,0));
-                }
+            FileInputStream in = new FileInputStream(file);
+
+            //Assemble Name Headder
+            for (char c : file.getName().toCharArray()){
+                nextVal(colors,((int)c) & 0xFF);
             }
+            nextVal(colors,255);
+
+            //Assemble Size Headder
+            for (char c : String.valueOf(file.length()).toCharArray()){
+                nextVal(colors,Integer.parseInt(c+""));
+            }
+            nextVal(colors,255);
+
+            //Assemble Data
+            int i = 0;
+            long dataLength = file.length();
+            int p = -1;
+            int lastP = -1;
+            while ((dataBuffer = in.read()) != -1){
+                if ((p = (int)(((float)i/(float)dataLength)*100)) > lastP){
+                    lastP = p;
+                    System.out.println("Collecting: "+p+"%"+"("+i+"/"+dataLength+")");
+                }
+                i++;
+                nextVal(colors, dataBuffer);
+            }
+
+            //Clear Buffers and write Last Data
+            colors.add(addColor(colTmp));
+            Arrays.fill(colTmp,0);
+            dataBufferCounter = -1;
 
             //Save Image
             saveImage(colors,file,savePath);
@@ -63,16 +93,35 @@ public class File2Pic {
         }
     }
 
+    public void nextVal(ArrayList<Color> colors, int val){
+        dataBufferCounter++;
+        if (dataBufferCounter >= 3) {
+            colors.add(addColor(colTmp));
+            dataBufferCounter = 0;
+            Arrays.fill(colTmp,0);
+        }
+        colTmp[dataBufferCounter] = val;
+    }
+
     public void saveImage(ArrayList<Color> colors, File file, File savePath) throws IOException {
         int dimensions = (int)Math.sqrt(colors.size())+1;
         final BufferedImage image = new BufferedImage ( dimensions, dimensions, BufferedImage.TYPE_INT_ARGB );
         final Graphics2D graphics2D = image.createGraphics ();
         int row = 0;
+        int u = 0;
+        long dataLength = colors.size();
+        int p = -1;
+        int lastP = -1;
         for (int i = 0; i < colors.size(); i++) {
             graphics2D.setPaint(colors.get(i));
             if (i>=dimensions){
                 row = (int) i/dimensions;
             }
+            if ((p = (int)(((float)u/(float)dataLength)*100)) > lastP){
+                lastP = p;
+                System.out.println("Drawing: "+p+"%"+"("+u+"/"+dataLength+")");
+            }
+            u++;
             graphics2D.fillRect(i-(row*(dimensions)), row, 1, 1);
         }
         graphics2D.dispose ();
@@ -80,21 +129,11 @@ public class File2Pic {
             savePath.mkdir();
         }
         ImageIO.write (image, "png", new File(savePath + "\\" + file.getName() + ".png"));
+        System.out.println("Saved: "+ savePath + "\\" + file.getName() + ".png\n");
     }
 
-    public void assembleIntColorValues(ArrayList<Integer> colorIntValues, File file, byte[] data){
-        for (char c : file.getName().toCharArray()){
-            colorIntValues.add(((int)c) & 0xFF);
-        }
-        colorIntValues.add(255);
-        for (char c : String.valueOf(data.length).toCharArray()){
-            System.out.println(c);
-            colorIntValues.add((Integer.parseInt(c+"")));
-        }
-        colorIntValues.add(255);
-        for (byte d : data) {
-            colorIntValues.add(d & 0xFF);
-        }
+    public Color addColor(int [] buffer){
+        return new Color(buffer[0],buffer[1],buffer[2]);
     }
 
     public void convertIntoFile(File file, File savePath) {
