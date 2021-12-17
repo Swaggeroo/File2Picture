@@ -19,25 +19,41 @@ public class File2Pic {
     int row = 0;
     int drawCounter = 0;
 
-    public File2Pic(String path) {
-        File file = new File(path);
-        if (file.isFile()){
-            convertIntopicture(file,file.getParentFile());
-        }else {
-            try {
-                for (File oFile : file.listFiles()){
-                    if (oFile.isFile()){
-                        convertIntopicture(oFile, new File(file.getAbsolutePath()+"\\outputPictures"));
+    UI ui = null;
+
+    public File2Pic(String[] paths) {
+        start(paths);
+    }
+
+    public File2Pic(String[] paths, UI ui){
+        this.ui = ui;
+        start(paths);
+    }
+
+    public void start(String[] paths){
+        for (String path : paths) {
+            File file = new File(path);
+            if (file.isFile()) {
+                convertIntopicture(file, file.getParentFile());
+            } else {
+                try {
+                    for (File oFile : file.listFiles()) {
+                        if (oFile.isFile()) {
+                            convertIntopicture(oFile, new File(file.getAbsolutePath() + "\\outputPictures"));
+                        }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+        }
+        if (ui != null){
+            ui.finished();
         }
     }
 
     public void convertIntopicture(File file, File savePath){
-        System.out.println("Covert started: "+file.getAbsolutePath());
+        logMessage("Covert started: "+file.getAbsolutePath());
         try {
             //Calculate PixelCount
             long dataPoints = file.length();
@@ -59,7 +75,6 @@ public class File2Pic {
             }
             nextVal(255);
 
-            System.out.println(file.length());
             //Assemble Size Headder
             for (char c : String.valueOf(file.length()).toCharArray()){
                 nextVal(Integer.parseInt(c+""));
@@ -75,7 +90,7 @@ public class File2Pic {
                 //Print Percentage if Percentage is higher
                 if ((p = (int)(((float)i/(float)dataLength)*100)) > lastP){
                     lastP = p;
-                    System.out.println(p+"%"+" ("+i+"/"+dataLength+")");
+                    logMessage(p+"%"+" ("+i+"/"+dataLength+")");
                 }
                 i++;
                 nextVal(dataBuffer);
@@ -83,7 +98,7 @@ public class File2Pic {
             in.close();
 
             //Print 100%
-            System.out.println("100%"+" ("+dataLength+"/"+dataLength+")");
+            logMessage("100%"+" ("+dataLength+"/"+dataLength+")");
 
             //Clear Buffers and write Last Data
             paintNextColor(getColorFromBuffer(colTmp));
@@ -122,10 +137,24 @@ public class File2Pic {
             savePath.mkdir();
         }
         ImageIO.write (image, "png", new File(savePath + "\\" + file.getName() + ".png"));
-        System.out.println("Saved: "+ savePath + "\\" + file.getName() + ".png\n");
+        logMessage("Saved: "+ savePath + "\\" + file.getName() + ".png\n");
+        finishedItem(file,true);
     }
 
     public Color getColorFromBuffer(int [] buffer){
         return new Color(buffer[0],buffer[1],buffer[2]);
+    }
+
+    public void logMessage(String message){
+        if (ui != null){
+            ui.addLog(message+"\n");
+        }
+        System.out.println(message);
+    }
+
+    public void finishedItem(File file, boolean successful){
+        if (ui != null){
+            ui.finishedFile(file,successful);
+        }
     }
 }

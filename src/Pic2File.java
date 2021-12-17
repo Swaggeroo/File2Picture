@@ -20,27 +20,47 @@ public class Pic2File {
     int p = -1;
     int lastP = -1;
 
-    public Pic2File(String path) {
-        File file = new File(path);
-        if (file.isFile()){
-            savePath = file.getParentFile();
-            convertIntoFile(file);
-        }else {
-            try {
-                for (File oFile : file.listFiles()){
-                    if (oFile.isFile()){
-                        savePath = new File(file.getAbsolutePath()+"\\outputFiles");
-                        convertIntoFile(oFile);
+    UI ui = null;
+
+    boolean error = false;
+    File currentFile;
+
+    public Pic2File(String[] paths) {
+        start(paths);
+    }
+
+    public Pic2File(String[] paths, UI ui){
+        this.ui = ui;
+        start(paths);
+    }
+
+    public void start(String[] paths){
+        for (String path : paths) {
+            File file = new File(path);
+            if (file.isFile()){
+                savePath = file.getParentFile();
+                convertIntoFile(file);
+            }else {
+                try {
+                    for (File oFile : file.listFiles()){
+                        if (oFile.isFile()){
+                            savePath = new File(file.getAbsolutePath()+"\\outputFiles");
+                            convertIntoFile(oFile);
+                        }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+        }
+        if (ui != null){
+            ui.finished();
         }
     }
 
     public void convertIntoFile(File file) {
-        System.out.println("Started: "+file.getAbsolutePath());
+        logMessage("Started: "+file.getAbsolutePath());
+        currentFile = file;
         BufferedImage image = null;
         try {
             image = ImageIO.read(file);
@@ -48,10 +68,20 @@ public class Pic2File {
             e.printStackTrace();
         }
 
-        int dimensions = image.getHeight();
+        int dimensions = 0;
+        try {
+            dimensions = image.getHeight();
+        } catch (Exception e) {
+            e.printStackTrace();
+            logMessage("ERROR converting File\nAre you sure that this is a picture:\n"+file.getPath()+"\n");
+            finishedItem(file,false);
+            return;
+        }
+
         for (int y = 0; y<dimensions; y++){
             for (int x = 0; x<dimensions; x++){
                 int clr = image.getRGB(x, y);
+                //logMessage("Got RGB Values: "+clr+"\n");
                 if (state < 3){
                     nextByte((clr & 0x00ff0000) >> 16);
                 }
@@ -61,6 +91,12 @@ public class Pic2File {
                 if (state < 3){
                     nextByte(clr & 0x000000ff);
                 }
+                if (error){
+                    break;
+                }
+            }
+            if (error){
+                break;
             }
         }
 
@@ -78,27 +114,36 @@ public class Pic2File {
             case 2:
                 writeData(val);
                 break;
+            case 3:
+                error = true;
+                logMessage("ERROR Converting to File are you sure that this is a FilePicture");
+                break;
             default:
-                System.out.println("State Error");
+                logMessage("State Error");
                 break;
         }
     }
 
     public void nexFileNameByte(int val){
-        if (val != 255){
+        if (val != 255 && val != 256){
             fileName += (char)val;
+            if (fileName.length() > 300){
+                nexFileNameByte(256);
+            }
+        }else if (val == 256){
+            state = 3;
         }else{
             try {
                 if (!savePath.exists()){
                     savePath.mkdir();
                 }
                 File f = new File(savePath+"\\"+fileName);
-                System.out.println(f);
+                logMessage(f.toString());
                 out = new FileOutputStream(f);
             } catch (FileNotFoundException e) {
-                System.out.println("Fatal Save Error");
+                logMessage("Fatal Save Error");
+                state = 3;
                 e.printStackTrace();
-                System.exit(5);
             }
             state++;
         }
@@ -122,25 +167,29 @@ public class Pic2File {
                 out.flush();
                 if ((p = 100-(int)(((float)dataLength/(float)dataLengthOld)*100)) > lastP){
                     lastP = p;
-                    System.out.println(p+"%"+" ("+dataLength+" left)");
+                    logMessage(p+"%"+" ("+dataLength+" left)");
                 }
             } catch (IOException e) {
-                System.out.println("Fatal Save Error - Couldn't write byte");
+                logMessage("Fatal Save Error - Couldn't write byte");
+                state = 3;
                 e.printStackTrace();
-                System.exit(5);
             }
             dataLength--;
         }else {
-            System.out.println("Finished: "+ fileName);
+            logMessage("Finished: "+ fileName+"\n");
+            finishedItem(currentFile,true);
             state++;
         }
     }
 
     public void cleanUp() {
+        if (error){
+            finishedItem(currentFile,false);
+        }
         try {
             out.flush();
             out.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         state = 0;
@@ -150,5 +199,19 @@ public class Pic2File {
         dataLengthOld = 0;
         p = -1;
         lastP = -1;
+        error = false;
+    }
+
+    public void logMessage(String message){
+        if (ui != null){
+            ui.addLog(message+"\n");
+        }
+        System.out.println(message);
+    }
+
+    public void finishedItem(File file, boolean successful){
+        if (ui != null){
+            ui.finishedFile(file,successful);
+        }
     }
 }

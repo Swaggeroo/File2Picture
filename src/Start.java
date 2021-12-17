@@ -1,20 +1,30 @@
+import javax.swing.*;
 import java.util.Scanner;
 
 public class Start {
     public static void main(String[] args) {
-        //for Testing
-        if (false){
-            args[0] = ".\\testFiles\\outputPictures";
-            args[1] = "false";
-            System.out.println("Klick");
-            new Scanner(System.in).nextLine();
-        }
-
         System.out.println("Started");
-        if (Boolean.parseBoolean(args[1])){
-            new File2Pic(args[0]);
+
+        if (args.length > 0){
+            if (Boolean.parseBoolean(args[1])){
+                new File2Pic(new String[]{args[0]});
+            }else {
+                new Pic2File(new String[]{args[0]});
+            }
         }else {
-            new Pic2File(args[0]);
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    //Turn off metal's use of bold fonts
+                    UIManager.put("swing.boldMetal", Boolean.FALSE);
+                    try {
+                        UIManager.setLookAndFeel(
+                                UIManager.getSystemLookAndFeelClassName());
+                    } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
+                        e.printStackTrace();
+                    }
+                    UI.createAndShowGUI();
+                }
+            });
         }
     }
 }
