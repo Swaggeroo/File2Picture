@@ -14,6 +14,11 @@ public class Pic2File {
     String fileName = "";
     String dataLengthBuffer = "";
     long dataLength = 0;
+    long dataLengthOld = 0;
+
+    //Percentage
+    int p = -1;
+    int lastP = -1;
 
     public Pic2File(String path) {
         File file = new File(path);
@@ -35,6 +40,7 @@ public class Pic2File {
     }
 
     public void convertIntoFile(File file) {
+        System.out.println("Started: "+file.getAbsolutePath());
         BufferedImage image = null;
         try {
             image = ImageIO.read(file);
@@ -103,8 +109,8 @@ public class Pic2File {
             dataLengthBuffer += val;
         }else {
             dataLength = Long.parseLong(dataLengthBuffer);
+            dataLengthOld = dataLength;
             dataLengthBuffer = "";
-            System.out.println(dataLength);
             state++;
         }
     }
@@ -114,6 +120,10 @@ public class Pic2File {
             try {
                 out.write(val);
                 out.flush();
+                if ((p = 100-(int)(((float)dataLength/(float)dataLengthOld)*100)) > lastP){
+                    lastP = p;
+                    System.out.println(p+"%"+" ("+dataLength+" left)");
+                }
             } catch (IOException e) {
                 System.out.println("Fatal Save Error - Couldn't write byte");
                 e.printStackTrace();
@@ -121,6 +131,7 @@ public class Pic2File {
             }
             dataLength--;
         }else {
+            System.out.println("Finished: "+ fileName);
             state++;
         }
     }
@@ -136,5 +147,8 @@ public class Pic2File {
         fileName = "";
         dataLength = 0;
         dataLengthBuffer = "";
+        dataLengthOld = 0;
+        p = -1;
+        lastP = -1;
     }
 }
