@@ -14,7 +14,7 @@ Just [download](https://github.com/Swaggeroo/File2Picture/releases/latest) the l
 # Usage
 Just start the jar-File
 
-##Commandline Usage
+## Commandline Usage
 Just run `java -jar [jar-path] [file/dir-path] [switch convert direction]` in the command line
 Note: If you run it without the Arguments the UI will launch
 ### Arguments
